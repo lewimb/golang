@@ -15,8 +15,14 @@ func NewRepository(db *gorm.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) AddUser(user model.User) (string, error) {
-	return "", errors.New("not implemented") // TODO: replace this
+func (r *Repository) AddUser(user model.User) (*model.User, error) {
+	result := r.db.Create(&user)
+	if result.Error != nil{
+		return nil,result.Error
+	}
+
+	// return "", errors.New("not implemented") // TODO: replace this
+	return &user,nil
 }
 
 func (r *Repository) GetUserByUsername(username string) (model.User, error) {

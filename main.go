@@ -4,7 +4,9 @@ import (
 	"a21hc3NpZ25tZW50/model"
 	"a21hc3NpZ25tZW50/repository/authRepository"
 	dbRepository "a21hc3NpZ25tZW50/repository/dbRepository"
-	"a21hc3NpZ25tZW50/service"
+	"errors"
+
+	// "a21hc3NpZ25tZW50/service"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,10 +14,14 @@ import (
 	_ "embed"
 
 	"github.com/gin-gonic/gin"
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+)
+
+const (
+    UniqueViolationErr = pq.ErrorCode("23505")
 )
 
 type Credential struct {
@@ -27,8 +33,17 @@ type Credential struct {
 	Schema       string
 }
 
+// type SignUp struct {
+// 	Username   string `json:"username" gorm:"uniqueIndex;not null;unique"`
+// 	Password   string `json:"password" gorm:"not null"`
+// 	Fullname   string `json:"fullname"`
+// 	Desc       string `json:"desc"`
+// 	ProfilePic string `json:"profilePic"`
+// }
+
 func AuthMiddleware(authRepo *authRepository.Repository) gin.HandlerFunc {
 	// TODO: answer here
+	return nil
 }
 
 func Connect(creds *Credential) (*gorm.DB, error) {
@@ -47,7 +62,7 @@ func Connect(creds *Credential) (*gorm.DB, error) {
 }
 
 func SetupRouter(dbRepo *dbRepository.Repository, authRepo *authRepository.Repository) *gin.Engine {
-	svc := service.NewService(*dbRepo, authRepo)
+	// svc := service.NewService(*dbRepo, authRepo)
 
 	router := gin.Default()
 
@@ -57,6 +72,31 @@ func SetupRouter(dbRepo *dbRepository.Repository, authRepo *authRepository.Repos
 
 	router.POST("/users", func(c *gin.Context) {
 		// TODO: answer here
+		var signUp model.User
+
+		err := c.ShouldBindJSON(&signUp)
+		if err != nil{
+			c.JSON(http.StatusBadRequest,gin.H{"error":"invalid username or password"})
+		}
+
+		_,err = dbRepo.AddUser(signUp)
+
+		var existingUser model.User
+		if err := dbRepo.db.Where("username = ?", signUp.Username).First(&existingUser).Error; err == nil {
+			// If a user with the same username is found, return a conflict error
+			c.JSON(http.StatusConflict, gin.H{"error": "username already registered"})
+			return
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			// If there's any other error besides "record not found", return a server error
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not check user existence"})
+			return
+		}
+	
+	
+
+		c.Status(http.StatusOK)
+
+		
 	})
 
 	router.POST("/signin", func(c *gin.Context) {
@@ -97,7 +137,7 @@ func main() {
 		Host:         "localhost",
 		Username:     "postgres",
 		Password:     "postgres",
-		DatabaseName: "kampusmerdeka",
+		DatabaseName: "be_final_project",
 		Port:         5432,
 	}
 	dbConn, err := Connect(&dbCredential)

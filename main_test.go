@@ -29,7 +29,7 @@ var _ = Describe("Main", Ordered, func() {
 		Host:         "localhost",
 		Username:     "postgres",
 		Password:     "postgres",
-		DatabaseName: "kampusmerdeka",
+		DatabaseName: "be_final_project",
 		Port:         5432,
 		Schema:       "public",
 	}
