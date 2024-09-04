@@ -17,16 +17,21 @@ func NewRepository(db *gorm.DB) *Repository {
 
 func (r *Repository) AddUser(user model.User) (*model.User, error) {
 	result := r.db.Create(&user)
-	if result.Error != nil{
-		return nil,result.Error
+	if result.Error != nil {
+		return nil, result.Error
 	}
 
 	// return "", errors.New("not implemented") // TODO: replace this
-	return &user,nil
+	return &user, nil
 }
 
-func (r *Repository) GetUserByUsername(username string) (model.User, error) {
-	return model.User{}, errors.New("not implemented") // TODO: replace this
+func (r *Repository) GetUserByUsername(username string) (*model.User, error) {
+	var user model.User
+	err := r.db.Where("username = ?", username).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, err // TODO: replace this
 }
 
 // Photo methods

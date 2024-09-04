@@ -14,14 +14,9 @@ import (
 	_ "embed"
 
 	"github.com/gin-gonic/gin"
-	"github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
-)
-
-const (
-    UniqueViolationErr = pq.ErrorCode("23505")
 )
 
 type Credential struct {
@@ -32,14 +27,6 @@ type Credential struct {
 	Port         int
 	Schema       string
 }
-
-// type SignUp struct {
-// 	Username   string `json:"username" gorm:"uniqueIndex;not null;unique"`
-// 	Password   string `json:"password" gorm:"not null"`
-// 	Fullname   string `json:"fullname"`
-// 	Desc       string `json:"desc"`
-// 	ProfilePic string `json:"profilePic"`
-// }
 
 func AuthMiddleware(authRepo *authRepository.Repository) gin.HandlerFunc {
 	// TODO: answer here
@@ -71,32 +58,27 @@ func SetupRouter(dbRepo *dbRepository.Repository, authRepo *authRepository.Repos
 	})
 
 	router.POST("/users", func(c *gin.Context) {
-		// TODO: answer here
 		var signUp model.User
-
 		err := c.ShouldBindJSON(&signUp)
-		if err != nil{
-			c.JSON(http.StatusBadRequest,gin.H{"error":"invalid username or password"})
+		if err != nil {
+			c.String(http.StatusBadRequest, "invalid username or password")
 		}
 
-		_,err = dbRepo.AddUser(signUp)
-
-		var existingUser model.User
-		if err := dbRepo.db.Where("username = ?", signUp.Username).First(&existingUser).Error; err == nil {
-			// If a user with the same username is found, return a conflict error
-			c.JSON(http.StatusConflict, gin.H{"error": "username already registered"})
+		if _, err = dbRepo.GetUserByUsername(signUp.Username); err == nil {
+			c.String(http.StatusConflict, "username already registered")
 			return
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-			// If there's any other error besides "record not found", return a server error
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not check user existence"})
+			c.String(http.StatusInternalServerError, "could not check user existence")
 			return
 		}
-	
-	
 
-		c.Status(http.StatusOK)
+		newUser, err := dbRepo.AddUser(signUp)
+		if err != nil {
+			c.String(http.StatusInternalServerError, "could not check user existence")
+			return
+		}
 
-		
+		c.JSON(http.StatusCreated, newUser)
 	})
 
 	router.POST("/signin", func(c *gin.Context) {
@@ -137,7 +119,7 @@ func main() {
 		Host:         "localhost",
 		Username:     "postgres",
 		Password:     "postgres",
-		DatabaseName: "be_final_project",
+		DatabaseName: "kampusmerdeka",
 		Port:         5432,
 	}
 	dbConn, err := Connect(&dbCredential)
